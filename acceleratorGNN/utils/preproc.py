@@ -11,6 +11,9 @@ format_s_dict = {
     'agnews': 'Article: {text}\nAnswer:{label}',
     'trec': 'Question: {text}\nAnswer Type:{label}',
     'emo': 'Dialogue: {text}\nEmotion:{label}',
+    'amazon': 'Review: {text}\nSentiment:{label}',
+    'yahoo': 'Question: {text}\nTopic:{label}',
+    'hate': 'Speech: {text}\nlabel:{label}'
 }
 
 label_dict = {'sst2': {0: ' Negative', 1: ' Positive'},
@@ -19,6 +22,11 @@ label_dict = {'sst2': {0: ' Negative', 1: ' Positive'},
                           4: ' Location',
                           5: ' Number'},
     'emo': {0: ' Others', 1: ' Happy', 2: ' Sad', 3: ' Angry'},
+    'amazon': {0: ' Negative', 1: ' Positive'},
+    'yahoo': {0: ' Society', 1: ' Science', 2: ' Health', 3: ' Education',
+                          4: ' Tech', 5: ' Sports', 6: ' Business',
+                          7: ' Entertainment', 8: ' Family', 9: ' Politics'},
+    'hate': {0: ' Hate', 1: ' Offensive', 2: ' Normal'},
 }
 
 class Demo:
@@ -56,6 +64,7 @@ class ICLDataset(Dataset):
         #self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
         self.task_name = task_name
         self.model_max_length = model_max_length
+        self.model_type = 'llama' if model_max_length == 4096 else 'gpt'
         self.max_input_len = self._max_leng()
 
     def __len__(self):
@@ -82,17 +91,21 @@ class ICLDataset(Dataset):
         token_ids = token_ids[:token_ids.index(pad_id)] if pad_id in token_ids else token_ids # truncate pad tokens
 
         label_words = list(label_dict[self.task_name].values())
-        last_token_id = self.tokenizer.encode(':',add_special_tokens=False)[0]
+        last_token_id = self.tokenizer.convert_tokens_to_ids(':')
         last_token_position = next(i for i in reversed(range(len(token_ids))) if token_ids[i] == last_token_id)
 
         label_word_ids = []
         for word in label_words:
-            label_word_ids.append(self.tokenizer.encode(word, add_special_tokens=False)[0])
+            if self.model_type == 'gpt':
+                label_word_ids.append(self.tokenizer.encode(word, add_special_tokens=False)[0])
+            elif self.model_type == 'llama':
+                label_word_ids.append(self.tokenizer.encode(word, add_special_tokens=False)[1])
 
         label_positions = []
         for idx, token_id in enumerate(token_ids):
             if token_id in label_word_ids and token_ids[idx-1] == last_token_id:
                 label_positions.append(idx)
+  
         for position in label_positions:
             edge_tuples_last.append([position, last_token_position])
             for indx, id in enumerate(token_ids[:position]):
@@ -183,7 +196,7 @@ if __name__ == '__main__':
     tokenizer = GPT2Tokenizer.from_pretrained('gpt2-xl')
     tokenizer.add_special_tokens({'pad_token': '[PAD]'})
 
-    icl_data = ICLDataModule('emo', 1000, 4, 1, tokenizer, 1024)
+    icl_data = ICLDataModule('hate', 1000, 4, 1, tokenizer, 1024)
 
     train_dataloader = icl_data.train_dataloader()
     for batch in train_dataloader:
