@@ -13,7 +13,7 @@ SEEDS=(0 42 421 520 1218)
 PROJECT_NAME="${EXP_TYPE}_${NUM_DEMO_PER_CLASS}_GPT2"
 
 runexp(){
-python3 train_${MODEL}.py \
+python3 src/train_${MODEL}.py \
 --task_name  ${1} \
 --exp_type $EXP_TYPE \
 --mode $MODE \

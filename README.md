@@ -1,5 +1,6 @@
 # GNNAVI: Navigating the Information Flow in Large Language Models by Graph Neural Network
 This repository contains the code for the paper *GNNAVI: Navigating the Information Flow in Large Language Models by Graph Neural Network*.
+![image](./image/model_overview.png)
 
 ## Environments and Dependencies
 - python==3.9.16
