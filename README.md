@@ -22,13 +22,13 @@ Training with the default setting:
 ```
 Please replace [model] with **gpt2** or **llama**.
 
-Please replace [exp] with following methods:
+Please replace [method] with following methods:
 
 - gnn : GNNAVI
--prefix : Prefix tuning
--adapter : Adapter
--lora : LoRA 
--fpft: Full Parameter Fine-tuning
+- prefix : Prefix tuning
+- adapter : Adapter
+- lora : LoRA 
+- fpft: Full Parameter Fine-tuning
 
 ```
 ## Model
