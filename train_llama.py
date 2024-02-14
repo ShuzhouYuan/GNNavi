@@ -20,7 +20,7 @@ OPTIMIZERS = {'Adam': Adam, 'AdamW': AdamW}
 
 class ICLforClassification(LightningModule):
     def __init__(
-        self, model_name_or_path, task_name, exp_type, tokenizer, run_id, optimizer, learning_rate, n_layer, warmup_steps, training_steps, do_schedule, virtual_token):
+        self, model_name_or_path, task_name, exp_type, tokenizer, run_id, optimizer, learning_rate, warmup_steps, training_steps, do_schedule, virtual_token):
         super().__init__()
 
         self.run_id = run_id
@@ -40,16 +40,16 @@ class ICLforClassification(LightningModule):
         self.save_hyperparameters()
 
         self.exp_type = exp_type
-        config = LlamaConfig.from_pretrained(model_name_or_path, num_hidden_layers=n_layer, token=ACCESS_TOKEN)
+        config = LlamaConfig.from_pretrained(model_name_or_path, token=ACCESS_TOKEN)
 
         if self.exp_type == 'gnn':
             self.model = LlamaForCausalLMwithGNN.from_pretrained(self.model_name_or_path, config=config, token=ACCESS_TOKEN)
             for name, param in self.model.named_parameters():
                 if "gnn" not in name:
                     param.requires_grad = False
-        elif self.exp_type == 'vanilla':
+        elif self.exp_type == 'fpft':
             self.model = LlamaForCausalLM.from_pretrained(self.model_name_or_path, config=config, token=ACCESS_TOKEN)
-        elif self.exp_type == 'vanilla-peft':
+        elif self.exp_type == 'prefix':
             model = LlamaForCausalLM.from_pretrained(self.model_name_or_path, config=config, token=ACCESS_TOKEN)
             peft_config = PrefixTuningConfig(task_type=TaskType.CAUSAL_LM, inference_mode=False, num_virtual_tokens=virtual_token)
             self.model = get_peft_model(model, peft_config)
@@ -148,7 +148,6 @@ class ICLforClassification(LightningModule):
         parser.add_argument("--project_name", type=str, default='test', help="name of the project")
         parser.add_argument("--checkpoint", type=str, default='')
         parser.add_argument("--do_schedule", type=bool, default=False)
-        parser.add_argument("--n_layer", type=int, default=32)
         parser.add_argument("--early_stop", type=int, default=15)
         parser.add_argument("--virtual_token", type=int, default=100)
         parser.add_argument("--checkpoint_dir", type=str, default='')
@@ -168,7 +167,7 @@ def main(args):
 
     training_steps = len(icldata.train_dataloader())*args.epochs
 
-    model = ICLforClassification(args.model_name, args.task_name, args.exp_type, tokenizer, random_string, optimizer, args.learning_rate, args.n_layer, args.warm_up_steps, training_steps, args.do_schedule, args.virtual_token)
+    model = ICLforClassification(args.model_name, args.task_name, args.exp_type, tokenizer, random_string, optimizer, args.learning_rate, args.warm_up_steps, training_steps, args.do_schedule, args.virtual_token)
 
     wandb_logger = WandbLogger(project= args.project_name)
     early_stop_callback = EarlyStopping(monitor=args.task_name+"_val_accuracy", patience=args.early_stop, mode="max")
