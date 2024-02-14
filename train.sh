@@ -10,7 +10,7 @@ OPTIMIZER='Adam'
 NUM_DEMO_PER_CLASS=5
 TASK_NAME=('sst2' 'emo' 'trec' 'amazon' 'agnews')
 SEEDS=(0 42 421 520 1218)
-PROJECT_NAME="${EXP_TYPE}_${NUM_DEMO_PER_CLASS}_GPT2"
+PROJECT_NAME="${EXP_TYPE}_${NUM_DEMO_PER_CLASS}_${MODEL}"
 
 runexp(){
 python3 src/train_${MODEL}.py \
