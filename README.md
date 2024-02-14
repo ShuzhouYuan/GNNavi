@@ -30,6 +30,6 @@ Please replace [method] with following methods:
 - lora : LoRA 
 - fpft: Full Parameter Fine-tuning
 
-```
-## Model
-In the code, the default method of GNNAVI is GNNAVI-GCN. You can use other GNN architechtures by changing the GNN layer in `./models/gpt2_gnn.py` or `./models/llama_gnn.py`. 
+
+## GNNAVI
+In the code, the default method for GNNAVI is GNNAVI-GCN. You can use other GNN architechtures by changing the GNN layer in `./models/gpt2_gnn.py` or `./models/llama_gnn.py`. 
