@@ -7,15 +7,15 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from torch.optim import Adam, AdamW
 from models.llama_gnn import LlamaForCausalLMwithGNN
 from transformers import LlamaTokenizer, LlamaConfig, LlamaForCausalLM, get_linear_schedule_with_warmup
-#from models.modeling_llama import LlamaForCausalLM
-from peft import get_peft_model, PrefixTuningConfig, TaskType
+from peft import get_peft_model, PrefixTuningConfig, TaskType, LoraConfig
+from adapters import LlamaAdapterModel
 import evaluate
 import argparse
 import random
 import string
 import torch
 
-ACCESS_TOKEN = "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"
+ACCESS_TOKEN = "Your_ACCESS_TOKEN"
 OPTIMIZERS = {'Adam': Adam, 'AdamW': AdamW}
 
 class ICLforClassification(LightningModule):
@@ -48,10 +48,19 @@ class ICLforClassification(LightningModule):
                 if "gnn" not in name:
                     param.requires_grad = False
         elif self.exp_type == 'vanilla':
-            self.model = LlamaForCausalLM.from_pretrained(self.model_name_or_path, config=config, token=ACCESS_TOKEN, device_map="cuda:0", load_in_8bit=True)
+            self.model = LlamaForCausalLM.from_pretrained(self.model_name_or_path, config=config, token=ACCESS_TOKEN)
         elif self.exp_type == 'vanilla-peft':
             model = LlamaForCausalLM.from_pretrained(self.model_name_or_path, config=config, token=ACCESS_TOKEN)
             peft_config = PrefixTuningConfig(task_type=TaskType.CAUSAL_LM, inference_mode=False, num_virtual_tokens=virtual_token)
+            self.model = get_peft_model(model, peft_config)
+        elif self.exp_type == 'adapter':
+            self.model = LlamaAdapterModel.from_pretrained(self.model_name_or_path, config=config)
+            self.model.add_adapter(self.task_name)
+            self.model.add_causal_lm_head('LMhead')
+            self.model.train_adapter(self.task_name)
+        elif self.exp_type == 'lora':
+            model = LlamaForCausalLM.from_pretrained(self.model_name_or_path, config=config)
+            peft_config = LoraConfig(task_type=TaskType.CAUSAL_LM, inference_mode=False, r=8, lora_alpha=32, lora_dropout=0.1)
             self.model = get_peft_model(model, peft_config)
 
         #self.model.resize_token_embeddings(len(self.tokenizer))
@@ -142,6 +151,7 @@ class ICLforClassification(LightningModule):
         parser.add_argument("--n_layer", type=int, default=32)
         parser.add_argument("--early_stop", type=int, default=15)
         parser.add_argument("--virtual_token", type=int, default=100)
+        parser.add_argument("--checkpoint_dir", type=str, default='')
         return parser
 
 def main(args):
@@ -162,16 +172,17 @@ def main(args):
 
     wandb_logger = WandbLogger(project= args.project_name)
     early_stop_callback = EarlyStopping(monitor=args.task_name+"_val_accuracy", patience=args.early_stop, mode="max")
-    checkpoint_callback = ModelCheckpoint(dirpath='/hkfs/work/workspace/scratch/nu4126-checkpoints/accelerator',filename=args.project_name + random_string, monitor=args.task_name+"_val_accuracy",mode="max",save_top_k=1)
+    checkpoint_callback = ModelCheckpoint(dirpath=args.checkpoint_dir,filename=args.project_name + random_string, monitor=args.task_name+"_val_accuracy",mode="max",save_top_k=1)
 
     if args.num_gpu == 1:
         trainer = Trainer(callbacks=[checkpoint_callback, early_stop_callback],max_epochs=args.epochs, accelerator='gpu', devices=[0],logger=wandb_logger)
     else:
-        trainer = Trainer(callbacks=[checkpoint_callback, early_stop_callback],max_epochs=args.epochs, accelerator="cuda", devices=args.num_gpu, strategy="fsdp",logger=wandb_logger)
+        trainer = Trainer(callbacks=[checkpoint_callback, early_stop_callback],max_epochs=args.epochs, strategy='ddp', accelerator="gpu", devices=-1, logger=wandb_logger)
             
     if args.checkpoint:
         if args.mode == 'do_train':
             trainer.fit(model, train_dataloaders=icldata.train_dataloader(), val_dataloaders=icldata.val_dataloader(), ckpt_path=args.checkpoint)
+            trainer.test(dataloaders=icldata.test_dataloader())
         elif args.mode == 'do_test':
             trainer.test(model, icldata.test_dataloader(), ckpt_path=args.checkpoint)
     else:
@@ -187,5 +198,5 @@ if __name__ == '__main__':
     parser = ICLforClassification.add_model_specific_args(parser)
 
     args = parser.parse_args()
-
+ 
     main(args)
