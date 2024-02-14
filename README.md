@@ -1,5 +1,6 @@
 # GNNAVI: Navigating the Information Flow in Large Language Models by Graph Neural Network
 This repository contains the code for the paper *GNNAVI: Navigating the Information Flow in Large Language Models by Graph Neural Network*.
+
 ![image](./image/model_overview.png)
 
 ## Environments and Dependencies
@@ -33,4 +34,4 @@ Please replace [method] with following methods:
 
 
 ## GNNAVI
-In the code, the default method for GNNAVI is GNNAVI-GCN. You can use other GNN architechtures by changing the GNN layer in `./models/gpt2_gnn.py` or `./models/llama_gnn.py`. 
+In the code, the default setting for GNNAVI is GNNAVI-GCN. You can use other GNN architechtures by changing the GNN layer in `./models/gpt2_gnn.py` or `./models/llama_gnn.py`. 
