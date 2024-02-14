@@ -11,9 +11,7 @@ format_s_dict = {
     'agnews': 'Article: {text}\nAnswer:{label}',
     'trec': 'Question: {text}\nAnswer Type:{label}',
     'emo': 'Dialogue: {text}\nEmotion:{label}',
-    'amazon': 'Review: {text}\nSentiment:{label}',
-    'yahoo': 'Question: {text}\nTopic:{label}',
-    'hate': 'Speech: {text}\nlabel:{label}'
+    'amazon': 'Review: {text}\nSentiment:{label}'
 }
 
 label_dict = {'sst2': {0: ' Negative', 1: ' Positive'},
@@ -22,11 +20,7 @@ label_dict = {'sst2': {0: ' Negative', 1: ' Positive'},
                           4: ' Location',
                           5: ' Number'},
     'emo': {0: ' Others', 1: ' Happy', 2: ' Sad', 3: ' Angry'},
-    'amazon': {0: ' Negative', 1: ' Positive'},
-    'yahoo': {0: ' Society', 1: ' Science', 2: ' Health', 3: ' Education',
-                          4: ' Tech', 5: ' Sports', 6: ' Business',
-                          7: ' Entertainment', 8: ' Family', 9: ' Politics'},
-    'hate': {0: ' Hate', 1: ' Offensive', 2: ' Normal'},
+    'amazon': {0: ' Negative', 1: ' Positive'}
 }
 
 class Demo:
@@ -61,7 +55,6 @@ class ICLDataset(Dataset):
     def __init__(self, data_list, tokenizer, task_name, model_max_length):
         self.data_list = data_list
         self.tokenizer = tokenizer
-        #self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
         self.task_name = task_name
         self.model_max_length = model_max_length
         self.model_type = 'llama' if model_max_length == 4096 else 'gpt'
@@ -78,7 +71,6 @@ class ICLDataset(Dataset):
         return min(max_input_len, self.model_max_length)
     
     def _tokenize_input(self, text):
-        #model_input = self.tokenizer(text = text, max_length=self.max_input_len,padding='max_length',truncation = True, return_tensors="pt")
         model_input = self.tokenizer(text = text, padding=False, return_tensors="pt")
         return model_input.input_ids, model_input.attention_mask
 
@@ -185,25 +177,4 @@ class ICLDataModule(LightningDataModule):
         test_dataset = ICLDataset(test_prompts, self.tokenizer, self.task_name, self.model_max_length)
         return DataLoader(test_dataset, batch_size=self.batch_size, shuffle=False)
 
-
-
-if __name__ == '__main__':
-    from transformers import GPT2Tokenizer
-    from pytorch_lightning import seed_everything
-
-    seed_everything(0)
-
-    tokenizer = GPT2Tokenizer.from_pretrained('gpt2-xl')
-    tokenizer.add_special_tokens({'pad_token': '[PAD]'})
-
-    icl_data = ICLDataModule('hate', 1000, 4, 1, tokenizer, 1024)
-
-    train_dataloader = icl_data.train_dataloader()
-    for batch in train_dataloader:
-        print(batch.text)
-        print(batch.label)
-        print(batch.input_ids)
-        print(batch.attention_mask)
-        print(batch.edge_index)
-        print(batch.edge_index_last)
 

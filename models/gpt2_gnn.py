@@ -1,18 +1,15 @@
 from transformers.models.gpt2.modeling_gpt2 import *
-from torch_geometric.nn import SAGEConv
+from torch_geometric.nn import SAGEConv, GCNConv, GATConv
 
 class GPT2withGNN(GPT2Model):
     def __init__(self, config):
         super().__init__(config)
         self.n_layer = config.n_layer
-        if self.n_layer == 1:
-            self.gnn_layer = SAGEConv(config.hidden_size, config.hidden_size, bias=True)
-        else:
-            self.gnn_middle_layer = SAGEConv(config.hidden_size, config.hidden_size, bias=True)
-            self.gnn_last_layer = SAGEConv(config.hidden_size, config.hidden_size, bias=True)
 
-        self.middle_layer_index = config.num_hidden_layers // 2
-        self.last_layer_index = config.num_hidden_layers - 1
+        # You can use difference GNNs here
+        self.gnn_layer = GCNConv(config.hidden_size, config.hidden_size, bias=True)
+
+        self.gnn_layer_index = config.num_hidden_layers // 8 * 7 - 1
 
     def forward(
         self,
@@ -168,23 +165,12 @@ class GPT2withGNN(GPT2Model):
 
             hidden_states = outputs[0]
             # TODO: Apply GNN after specific layers
-            if self.n_layer != 1:
-                if i == self.middle_layer_index:
+            if i == self.gnn_layer_index:
+                    edge_index_plus = torch.cat((edge_index_first, edge_index_last), dim=1)
                     orig_size = hidden_states.size()
                     hidden_states = hidden_states.view(-1,  self.embed_dim) # release batch dimension
-                    hidden_states = self.gnn_middle_layer(hidden_states, edge_index=edge_index_first)
-                    hidden_states = hidden_states.view(*orig_size)
-                elif i == self.last_layer_index:
-                    orig_size = hidden_states.size()
-                    hidden_states = hidden_states.view(-1,  self.embed_dim)
-                    hidden_states = self.gnn_last_layer(hidden_states, edge_index=edge_index_last)
-                    hidden_states = hidden_states.view(*orig_size)
-            else:
-                edge_index_plus = torch.cat((edge_index_first, edge_index_last), dim=1)
-                orig_size = hidden_states.size()
-                hidden_states = hidden_states.view(-1,  self.embed_dim) # release batch dimension
-                hidden_states = self.gnn_layer(hidden_states, edge_index=edge_index_plus)
-                hidden_states = hidden_states.view(*orig_size)
+                    hidden_states = self.gnn_layer(hidden_states, edge_index=edge_index_plus)
+                    hidden_states = hidden_states.view(*orig_size)      
             
             if use_cache is True:
                 presents = presents + (outputs[1],)
@@ -306,31 +292,4 @@ class GPT2LMHeadModelwithGNN(GPT2LMHeadModel):
             attentions=transformer_outputs.attentions,
             cross_attentions=transformer_outputs.cross_attentions,
         )
-
-if __name__ == '__main__':
-    import sys
-    sys.path.insert(0, '/home/hk-project-gnn4nlp/nu4126/acceleratorGNN')
-
-    from utils.preproc import ICLDataModule
-    from transformers import GPT2Tokenizer
-    from pytorch_lightning import seed_everything
-
-    seed_everything(0)
-
-    tokenizer = GPT2Tokenizer.from_pretrained('gpt2-xl')
-
-    icl_data = ICLDataModule('sst2', 1000, 4, 1, tokenizer, 1024)
-    model = GPT2LMHeadModelwithGNN.from_pretrained('gpt2-xl').to('cuda')
-    #model.resize_token_embeddings(len(tokenizer))
-
-    train_dataloader = icl_data.train_dataloader()
-    for batch in train_dataloader:
-        # print(batch.edge_index)
-        # print(batch.edge_index_last)
-        input_ids = batch.input_ids.to('cuda')
-        attention_mask = batch.attention_mask.to('cuda')
-        label = batch.label.to('cuda')
-        edge_index_first = batch.edge_index.to('cuda')
-        edge_index_last = batch.edge_index_last.to('cuda')
-        output = model(input_ids=input_ids,attention_mask=attention_mask, edge_index_first=edge_index_first,edge_index_last=edge_index_last)
-        print(output.logits.size())
+    

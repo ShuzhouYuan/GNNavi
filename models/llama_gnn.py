@@ -6,14 +6,11 @@ class LlamawithGNN(LlamaModel):
     def __init__(self, config: LlamaConfig):
         super().__init__(config)
         self.n_layer = config.num_hidden_layers
-        if self.n_layer == 1:
-            self.gnn_layer = SAGEConv(config.hidden_size, config.hidden_size, bias=True)
-        else:
-            self.gnn_middle_layer = SAGEConv(config.hidden_size, config.hidden_size, bias=True)
-            self.gnn_last_layer = SAGEConv(config.hidden_size, config.hidden_size, bias=True)
+       
+        # You can use difference GNNs here
+        self.gnn_layer = GCNConv(config.hidden_size, config.hidden_size, bias=True)
 
-        self.middle_layer_index = config.num_hidden_layers // 2
-        self.last_layer_index = config.num_hidden_layers - 1
+        self.gnn_layer_index = config.num_hidden_layers // 8 * 7 - 1
 
         self.embed_dim = config.hidden_size
 
@@ -125,18 +122,7 @@ class LlamawithGNN(LlamaModel):
 
             hidden_states = layer_outputs[0]
             # TODO: Apply GNN after specific layers
-            if self.n_layer != 1:
-                if i == self.middle_layer_index:
-                    orig_size = hidden_states.size()
-                    hidden_states = hidden_states.view(-1,  self.embed_dim) # release batch dimension
-                    hidden_states = self.gnn_middle_layer(hidden_states, edge_index=edge_index_first)
-                    hidden_states = hidden_states.view(*orig_size)
-                elif i == self.last_layer_index:
-                    orig_size = hidden_states.size()
-                    hidden_states = hidden_states.view(-1,  self.embed_dim)
-                    hidden_states = self.gnn_last_layer(hidden_states, edge_index=edge_index_last)
-                    hidden_states = hidden_states.view(*orig_size)
-            else:
+            if i == self.gnn_layer_index:
                 edge_index_plus = torch.cat((edge_index_first, edge_index_last), dim=1)
                 orig_size = hidden_states.size()
                 hidden_states = hidden_states.view(-1,  self.embed_dim) # release batch dimension
@@ -268,37 +254,3 @@ class LlamaForCausalLMwithGNN(LlamaForCausalLM):
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
-
-
-if __name__ == '__main__':
-    import sys
-    sys.path.insert(0, '/home/hk-project-gnn4nlp/nu4126/acceleratorGNN')
-
-    from utils.preproc import ICLDataModule
-    from transformers import LlamaTokenizer, LlamaConfig
-    from pytorch_lightning import seed_everything
-
-    seed_everything(0)
-
-    model_name = 'meta-llama/Llama-2-7b-hf'
-    ACCESS_TOKEN = "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"
-
-    tokenizer = LlamaTokenizer.from_pretrained(model_name, token=ACCESS_TOKEN)
-    model = LlamaForCausalLMwithGNN.from_pretrained(model_name, token=ACCESS_TOKEN, load_in_4bit=True)
-    config = LlamaConfig.from_pretrained(model_name, token=ACCESS_TOKEN)
-
-    icl_data = ICLDataModule('sst2', 1000, 4, 1, tokenizer, config.max_position_embeddings)
-    #model.resize_token_embeddings(len(tokenizer))
-    train_dataloader = icl_data.train_dataloader()
-    #print(next(iter(train_dataloader)))
-    for batch in train_dataloader:
-        # print(batch.edge_index)
-        # print(batch.edge_index_last)
-        # print(batch.text)
-        input_ids = batch.input_ids.to('cuda')
-        attention_mask = batch.attention_mask.to('cuda')
-        label = batch.label.to('cuda')
-        edge_index_first = batch.edge_index.to('cuda')
-        edge_index_last = batch.edge_index_last.to('cuda')
-        output = model(input_ids=input_ids,attention_mask=attention_mask, edge_index_first=edge_index_first,edge_index_last=edge_index_last)
-        print(output.logits.size())
