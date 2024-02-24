@@ -26,7 +26,7 @@ Please replace [model] with **gpt2** or **llama**.
 
 Please replace [method] with following methods:
 
-- gnn : GNNAVI
+- gnn : GNNavi
 - prefix : Prefix tuning
 - adapter : Adapter
 - lora : LoRA 
@@ -34,4 +34,4 @@ Please replace [method] with following methods:
 
 
 ## GNNAVI
-In the code, the default setting for GNNAVI is GNNAVI-GCN. You can use other GNN architechtures by changing the GNN layer in `./src/models/gpt2_gnn.py` or `./src/models/llama_gnn.py`. 
+In the code, the default setting for GNNavi is GNNavi-GCN. You can use other GNN architechtures by changing the GNN layer in `./src/models/gpt2_gnn.py` or `./src/models/llama_gnn.py`. 
