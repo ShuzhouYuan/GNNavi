@@ -27,9 +27,9 @@ Please replace [model] with **gpt2** or **llama**.
 Please replace [method] with following methods:
 
 - gnn : GNNavi
+- lora : LoRA 
 - prefix : Prefix tuning
 - adapter : Adapter
-- lora : LoRA 
 - fpft: Full Parameter Fine-tuning
 
 
