@@ -1,7 +1,5 @@
 # GNNavi: Navigating the Information Flow in Large Language Models by Graph Neural Network
-This repository contains the code for the paper *GNNavi: Navigating the Information Flow in Large Language Models by Graph Neural Network*.
-
-[Preprint](https://arxiv.org/pdf/2402.11709)
+This repository contains the code for the paper [*GNNavi: Navigating the Information Flow in Large Language Models by Graph Neural Network*](https://arxiv.org/pdf/2402.11709).
 
 ![image](./image/model_overview.png)
 
