@@ -1,6 +1,8 @@
 # GNNavi: Navigating the Information Flow in Large Language Models by Graph Neural Network
 This repository contains the code for the paper *GNNavi: Navigating the Information Flow in Large Language Models by Graph Neural Network*.
 
+[Preprint](https://arxiv.org/pdf/2402.11709)
+
 ![image](./image/model_overview.png)
 
 ## Environments and Dependencies
@@ -35,3 +37,18 @@ Please replace [method] with following methods:
 
 ## GNNAVI
 In the code, the default setting for GNNavi is GNNavi-GCN. You can use other GNN architechtures by changing the GNN layer in `./src/models/gpt2_gnn.py` or `./src/models/llama_gnn.py`. 
+
+
+## How to cite
+
+Please cite our work as follows:
+
+```
+@article{yuan2024gnnavi,
+  title={GNNavi: Navigating the Information Flow in Large Language Models by Graph Neural Network},
+  author={Yuan, Shuzhou and Nie, Ercong and F{\"a}rber, Michael and Schmid, Helmut and Sch{\"u}tze, Hinrich},
+  journal={arXiv preprint arXiv:2402.11709},
+  year={2024}
+}
+```
+
